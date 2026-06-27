@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriBuddy AI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fcf8f2;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 { color: #d9534f; margin-bottom: 5px; }
+        p { color: #666; margin-bottom: 20px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        input:focus { border-color: #d9534f; outline: none; }
+        button {
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 15px;
+        }
+        button:hover { background-color: #c9302c; }
+        .result-box {
+            margin-top: 25px;
+            padding: 15px;
+            background: #fafafa;
+            border-left: 5px solid #d9534f;
+            border-radius: 4px;
+            text-align: left;
+            white-space: pre-line;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>🍎 NutriBuddy AI</h1>
+    <p>What ingredients are sitting in your fridge?</p>
+    
+    <input type="text" id="ingredientsInput" placeholder="e.g., potato, cheese, onion">
+    <button onclick="getRecipe()">Generate Recipe</button>
+
+    <div id="result" class="result-box"></div>
+</div>
+
+<script>
+    async function getRecipe() {
+        const ingredients = document.getElementById('ingredientsInput').value;
+        const resultBox = document.getElementById('result');
+        
+        if (!ingredients.trim()) {
+            alert("Please type some ingredients first!");
+            return;
+        }
+
+        resultBox.style.display = "block";
+        resultBox.innerText = "Chef NutriBuddy is cooking up an idea...";
+
+        try {
+            // This sends the input over to our FastAPI backend server
+            const response = await fetch('http://127.0.0.1:8000/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ingredients: ingredients })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                resultBox.innerText = data.response;
+            } else {
+                resultBox.innerText = "Oops: " + data.detail;
+            }
+        } catch (error) {
+            resultBox.innerText = "Error: Make sure your FastAPI server is running!";
+        }
+    }
+</script>
+
+</body>
+</html>
