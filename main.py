@@ -1,17 +1,24 @@
 import os
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from dotenv import load_dotenv
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+
+from pydantic import BaseModel
 from groq import Groq
 
-# 1. Load the secret API key from our .env file
+# Load environment variables
 load_dotenv()
 
-# 2. Build our FastAPI brain app
-app = FastAPI(title="NutriBuddy AI Backend")
+# Create FastAPI app
+app = FastAPI(title="AI Recipe Generator")
 
-# 3. Allow our frontend webpage to talk to this backend
+# Templates folder
+templates = Jinja2Templates(directory="templates")
+
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,30 +27,64 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 4. Connect to Groq AI
+# Groq client
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# 5. Define what the incoming data looks like
+# Request model
 class RecipeRequest(BaseModel):
     ingredients: str
 
-# 6. Create the endpoint your instructor requested (/generate)
+# Home Page
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request}
+    )
+
+# Generate Recipe Endpoint
 @app.post("/generate")
 async def generate_recipe(data: RecipeRequest):
     try:
-        # Ask the AI to act like a professional chef
+
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
                 {
-                    "role": "system", 
-                    "content": "You are NutriBuddy, a helpful and friendly culinary chef and nutritionist. The user will give you a list of ingredients. Respond with a quick, easy recipe name, step-by-step instructions, and a short note on the nutritional benefits."
+                    "role": "system",
+                    "content": """
+You are an expert chef.
+
+Generate a recipe using the ingredients provided.
+
+Return in this format:
+
+🍽 Recipe Name
+
+📝 Ingredients
+
+👨‍🍳 Instructions
+
+⏱ Cooking Time
+
+🥗 Nutritional Benefits
+"""
                 },
-                {"role": "user", "content": f"Create a recipe using these ingredients: {data.ingredients}"}
+                {
+                    "role": "user",
+                    "content": data.ingredients
+                }
             ],
             temperature=0.7,
             max_tokens=800
         )
-        return {"response": completion.choices[0].message.content}
+
+        return {
+            "response": completion.choices[0].message.content
+        }
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
